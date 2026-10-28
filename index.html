@@ -298,7 +298,7 @@ let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fi
   }
 
   const oldListClients=listClients;
-  listClients=function(){
+  clientList=function(){
     oldListClients();
     const exportButton=document.getElementById("export");
     if(exportButton){
@@ -508,7 +508,7 @@ let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fi
 
   function findDuplicate(r){
     const same=(a,b)=>norm(a)&&norm(a)===norm(b);
-    return clients().find(c=>
+    return records.filter(isClient).find(c=>
       (r.vat&&same(r.vat,c.vat))||
       (r.taxCode&&same(r.taxCode,c.taxCode))||
       (same(r.name,c.name)&&
@@ -591,12 +591,12 @@ let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fi
           updated++;
         }else skipped++;
       }else{
-        records.push({id:id(),type:"clienti",...data});
+        records.push({id:uid(),type:"clienti",...data});
         added++;
       }
     }
     try{
-      persist();
+      save();
       alert("Importazione completata.\n"+
         "Nuovi clienti: "+added+"\n"+
         "Aggiornati: "+updated+"\n"+
