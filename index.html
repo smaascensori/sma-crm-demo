@@ -1,295 +1,140 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SMA CRM 1.4</title><style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#22232a;background:#f5f5f7}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}.app{display:flex;min-height:100vh}aside{width:245px;flex-shrink:0;background:#fff;border-right:1px solid #e9e9ee;padding:25px 15px}.logo{font-size:25px;font-weight:800;letter-spacing:-1px;margin:0 10px 34px}.logo span{color:#d71920}nav button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:13px;border-radius:11px;color:#555763;margin:3px 0}nav button.active{background:#fff0f0;color:#c71920;font-weight:700}nav button:hover{background:#f4f4f6}main{flex:1;min-width:0;padding:35px;max-width:1500px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:24px}h1{font-size:29px;letter-spacing:-1px;margin:0}h2{font-size:19px;margin:0 0 18px}.sub,.muted{color:#7d7d87}.sub{margin:6px 0}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.card,.panel{background:#fff;border:1px solid #ebebef;border-radius:18px;padding:22px}.card small{color:#777}.card strong{display:block;font-size:28px;margin-top:10px}.panel{margin-top:18px;overflow-x:auto}.btn{background:#d01d28;color:#fff;border:0;border-radius:10px;padding:11px 16px;font-weight:600}.btn.secondary{background:#ededf1;color:#333}.btn.ghost{background:transparent;color:#c91b26;padding:7px}.btn:disabled{opacity:.5}.actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.filters{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:16px 0}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:13px 12px;border-bottom:1px solid #efeff2;font-size:14px}th{font-size:12px;color:#7d7d87}tr:last-child td{border-bottom:0}.tag{display:inline-block;padding:5px 9px;border-radius:8px;background:#f0f0f3;font-size:12px}.tag.ok{background:#e8f7ed;color:#13783b}.tag.lead{background:#edf1ff;color:#3559a7}form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}input,select,textarea{width:100%;border:1px solid #dcdce2;border-radius:10px;padding:11px;background:#fff}textarea{min-height:90px}.full{grid-column:1/-1}.note{font-size:13px;color:#777;line-height:1.6}.link{border:0;background:none;color:#bd1722;font-weight:600;text-align:left;padding:0}.empty{padding:24px;color:#777}.line{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.spacer{flex:1}.pill{font-size:12px;color:#888}.divider{height:1px;background:#eee;margin:22px 0}@media(max-width:950px){aside{width:205px}main{padding:20px}.cards{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.app{display:block}aside{width:100%;padding:12px}nav{display:flex;overflow-x:auto}nav button{width:auto;white-space:nowrap}.logo{margin:5px 10px 15px}main{padding:15px}.filters,form{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}}
+</style></head><body><div class="app"><aside><div class="logo"><img src="LOGO_SMA_standard.jpg" alt="SMA Ascensori" style="width:100%;height:auto;display:block;cursor:pointer" onclick="show('dashboard')"></div><nav id="menu"></nav></aside><main><div class="top"><div><h1 id="title">Dashboard</h1><p class="sub" id="subtitle">Panoramica commerciale</p></div><span class="tag">CRM · Demo 1.4</span></div><div id="content"></div></main></div><script>
+'use strict';const K='sma_demo_records';let records=[];try{const v=JSON.parse(localStorage.getItem(K)||'[]');records=Array.isArray(v)?v:[]}catch(e){alert('Impossibile leggere le anagrafiche salvate. Non sono state sovrascritte.')}const sections=[['dashboard','◫ Dashboard'],['clienti','♙ Clienti'],['contatti','☷ Contatti'],['cantieri','▤ Progetti / Cantieri'],['preventivi','▣ Preventivi'],['ordini','✓ Conferme ordine'],['newsletter','✉ Newsletter'],['impostazioni','⚙ Impostazioni']];let page='dashboard';const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const id=()=>typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'id-'+Date.now()+'-'+Math.random().toString(36).slice(2);function persist(){localStorage.setItem(K,JSON.stringify(records))}function isClient(r){return ['clienti','acquisiti','potenziali'].includes(r.type)}function status(r){return r.status||(r.type==='acquisiti'?'acquisito':'potenziale')}function clients(){return records.filter(isClient)}function sites(){return records.filter(r=>r.type==='cantieri')}function clientName(clientId){return clients().find(r=>r.id===clientId)?.name||'Cliente non collegato'}function nav(){ $('menu').innerHTML=sections.map(([k,v])=>`<button class="${page===k?'active':''}" data-nav="${k}">${v}</button>`).join('');document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>show(b.dataset.nav))}function show(p){page=p;nav();$('title').textContent=sections.find(s=>s[0]===p)?.[1].replace(/^[^ ]+ /,'')||p;$('subtitle').textContent=p==='dashboard'?'Panoramica delle attività commerciali':'Gestione SMA Ascensori';if(p==='dashboard')dashboard();else if(p==='clienti')listClients();else if(p==='cantieri')listSites();else if(p==='contatti')listContacts();else $('content').innerHTML='<div class="panel"><h2>Modulo in preparazione</h2><p class="muted">La funzionalità sarà implementata nelle prossime versioni.</p></div>'}function dashboard(){let c=clients(),s=sites();$('content').innerHTML=`<div class="cards">${[['Clienti acquisiti',c.filter(r=>status(r)==='acquisito').length],['Clienti potenziali',c.filter(r=>status(r)==='potenziale').length],['Contatti',records.filter(r=>r.type==='contatti').length],['Cantieri',s.length]].map(([t,n])=>`<div class="card"><small>${t}</small><strong>${n}</strong></div>`).join('')}</div><div class="panel"><h2>Riepilogo commerciale</h2><table><thead><tr><th>Tipologia</th><th>Offerte</th><th>Ordini</th><th>Valore offerte</th></tr></thead><tbody>${['NI · Nuovi impianti','MOD · Ammodernamenti','RIP · Riparazioni','MAN · Manutenzioni'].map(t=>`<tr><td>${t}</td><td>0</td><td>0</td><td>€ 0,00</td></tr>`).join('')}</tbody></table><p class="note">I moduli preventivi e ordini saranno collegati in una fase successiva.</p></div>`}function listClients(){let c=clients();$('content').innerHTML=`<div class="actions"><button class="btn" id="add">+ Nuovo cliente</button><button class="btn secondary" id="export">Esporta CSV</button><button class="btn secondary" id="import">Importa Excel / CSV</button></div><div class="panel"><h2>Anagrafiche clienti</h2><div class="filters"><input id="q" placeholder="Cerca ragione sociale, comune, email..."><select id="st"><option value="">Tutti gli stati</option><option value="potenziale">Potenziali</option><option value="acquisito">Acquisiti</option></select><select id="kind"><option value="">Tutte le tipologie</option>${['Azienda','Privato','Professionista','Condominio','Impresa edile'].map(x=>`<option>${x}</option>`).join('')}</select></div><table><thead><tr><th>Cliente</th><th>Tipologia</th><th>Comune</th><th>Stato</th><th>Cantieri</th></tr></thead><tbody id="rows"></tbody></table></div>`;$('add').onclick=()=>clientForm();$('export').onclick=exportClients;$('import').onclick=importClients;['q','st','kind'].forEach(k=>$(k).oninput=render);render();function render(){let q=$('q').value.toLowerCase(),st=$('st').value,kind=$('kind').value;let out=c.filter(r=>(!st||status(r)===st)&&(!kind||r.kind===kind)&&[r.name,r.city,r.email,r.phone,r.vat].join(' ').toLowerCase().includes(q));$('rows').innerHTML=out.map(r=>`<tr><td><button class="link" data-id="${esc(r.id)}">${esc(r.name)}</button><div class="pill">${esc(r.email)}</div></td><td>${esc(r.kind||'Non specificata')}</td><td>${esc(r.city)}</td><td><span class="tag ${status(r)==='acquisito'?'ok':'lead'}">${status(r)==='acquisito'?'Acquisito':'Potenziale'}</span></td><td>${sites().filter(s=>s.clientId===r.id).length}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Nessuna anagrafica trovata</td></tr>';document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>clientDetail(b.dataset.id))}}function input(name,label,value='',required=false,opts=''){return `<div><label for="f_${name}">${label}${required?' *':''}</label><input id="f_${name}" name="${name}" value="${esc(value)}" ${required?'required':''} ${opts}></div>`}function select(name,label,options,value){return `<div><label for="f_${name}">${label}</label><select id="f_${name}" name="${name}">${options.map(x=>`<option value="${esc(x)}" ${x===value?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`}function clientForm(clientId){let old=clients().find(r=>r.id===clientId)||{};$('title').textContent=clientId?'Modifica cliente':'Nuovo cliente';$('content').innerHTML=`<div class="panel"><h2>Dati anagrafici</h2><form id="entry">${select('kind','Tipologia soggetto *',['Azienda','Privato','Professionista','Condominio','Impresa edile'],old.kind||'Azienda')}${select('status','Stato commerciale *',['potenziale','acquisito'],status(old))}<div class="full" id="namelabel">${input('name','Ragione sociale / Denominazione',old.name,true)}</div>${input('phone','Telefono',old.phone,true)}${input('email','Email',old.email,true,'type="email"')}${input('street','Via / Piazza e numero civico',old.street,true)}${input('cap','CAP',old.cap,true)}${input('city','Comune',old.city,true)}${input('province','Provincia',old.province,true)}${input('vat','Partita IVA',old.vat)}${input('taxCode','Codice fiscale',old.taxCode)}${input('pec','PEC',old.pec)}${input('sdi','Codice SDI',old.sdi)}${input('role','Qualifica / Albo',old.role)}${input('contactPerson','Referente',old.contactPerson)}<div class="full"><label>Note</label><textarea name="notes">${esc(old.notes)}</textarea></div><div class="full line"><button class="btn" type="submit">Salva cliente</button><button class="btn secondary" type="button" id="cancel">Annulla</button></div></form><p class="note">I dati sono salvati solo in questo browser. Non inserire dati aziendali reali nella demo pubblica.</p></div>`;const updateName=()=>{let kind=$('f_kind').value;let lab=kind==='Privato'?'Nome e cognome':kind==='Professionista'?'Nome, cognome e qualifica':kind==='Condominio'?'Denominazione condominio':'Ragione sociale';document.querySelector('label[for="f_name"]').textContent=lab+' *'};$('f_kind').onchange=updateName;updateName();setupAddressAutocomplete();$('cancel').onclick=()=>clientId?clientDetail(clientId):show('clienti');$('entry').onsubmit=e=>{e.preventDefault();let obj=Object.fromEntries(new FormData(e.target));if(clientId){Object.assign(old,obj,{type:'clienti'})}else records.push({id:id(),type:'clienti',...obj});persist();show('clienti')}}function clientDetail(clientId){let c=clients().find(r=>r.id===clientId);if(!c)return show('clienti');$('title').textContent=c.name;$('subtitle').textContent='Scheda cliente · '+(c.kind||'Tipologia non specificata');let linked=sites().filter(s=>s.clientId===clientId);$('content').innerHTML=`<div class="actions"><button class="btn secondary" id="back">← Tutti i clienti</button><button class="btn" id="edit">Modifica cliente</button><button class="btn secondary" id="newsite">+ Nuovo cantiere collegato</button></div><div class="panel"><h2>Informazioni cliente</h2><div class="cards" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><p class="muted">Stato commerciale</p><strong>${status(c)==='acquisito'?'Acquisito':'Potenziale'}</strong></div><div><p class="muted">Tipologia</p><strong>${esc(c.kind||'Non specificata')}</strong></div><div><p class="muted">Contatti</p>${esc(c.email)}<br>${esc(c.phone)}</div><div><p class="muted">Indirizzo</p>${esc(c.street)} ${esc(c.cap)} ${esc(c.city)} (${esc(c.province)})</div></div></div><div class="panel"><h2>Contatti collegati</h2><table><tbody>${records.filter(r=>r.type==='contatti'&&(r.clientLinks||[]).some(l=>l.clientId===clientId)).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc((r.clientLinks||[]).find(l=>l.clientId===clientId)?.role||r.role||'')}</td><td>${esc(r.phone)}</td></tr>`).join('')||'<tr><td class="empty">Nessun contatto collegato</td></tr>'}</tbody></table></div><div class="panel"><h2>Cantieri collegati (${linked.length})</h2><table><thead><tr><th>Riferimento</th><th>Comune</th><th>Indirizzo</th></tr></thead><tbody>${linked.map(s=>`<tr><td><button class="link" data-site="${esc(s.id)}">${esc(s.name)}</button></td><td>${esc(s.city)}</td><td>${esc(s.street)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">Nessun cantiere collegato</td></tr>'}</tbody></table></div>`;$('back').onclick=()=>show('clienti');$('edit').onclick=()=>clientForm(clientId);$('newsite').onclick=()=>siteForm(null,clientId);document.querySelectorAll('[data-site]').forEach(b=>b.onclick=()=>siteDetail(b.dataset.site))}function listSites(){let all=sites();$('content').innerHTML=`<div class="actions"><button class="btn" id="add">+ Nuovo cantiere</button><button class="btn secondary" id="export">Esporta CSV</button></div><div class="panel"><h2>Progetti e cantieri</h2><input id="q" placeholder="Cerca cantiere, comune o cliente..."><table><thead><tr><th>Cantiere</th><th>Cliente collegato</th><th>Comune</th><th>Indirizzo</th></tr></thead><tbody id="rows"></tbody></table></div>`;$('add').onclick=()=>siteForm();$('export').onclick=exportSites;$('q').oninput=render;render();function render(){let q=$('q').value.toLowerCase();let out=all.filter(r=>[r.name,r.city,r.street,clientName(r.clientId)].join(' ').toLowerCase().includes(q));$('rows').innerHTML=out.map(r=>`<tr><td><button class="link" data-site="${esc(r.id)}">${esc(r.name)}</button></td><td>${r.clientId&&clients().some(c=>c.id===r.clientId)?`<button class="link" data-client="${esc(r.clientId)}">${esc(clientName(r.clientId))}</button>`:'<span class="muted">Da collegare</span>'}</td><td>${esc(r.city)}</td><td>${esc(r.street)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">Nessun cantiere trovato</td></tr>';document.querySelectorAll('[data-site]').forEach(b=>b.onclick=()=>siteDetail(b.dataset.site));document.querySelectorAll('[data-client]').forEach(b=>b.onclick=()=>clientDetail(b.dataset.client))}}function siteForm(siteId,initialClientId){let old=sites().find(r=>r.id===siteId)||{},all=clients();$('title').textContent=siteId?'Modifica cantiere':'Nuovo cantiere';$('content').innerHTML=`<div class="panel"><h2>Dati cantiere</h2><form id="entry"><div class="full"><label>Cliente collegato *</label><select name="clientId" required><option value="">Seleziona un cliente...</option>${all.map(c=>`<option value="${esc(c.id)}" ${c.id===(old.clientId||initialClientId)?'selected':''}>${esc(c.name)}</option>`).join('')}</select><p class="note">Il cliente deve essere già presente nell'anagrafica.</p></div><div class="full">${input('name','Nome / Riferimento cantiere',old.name,true)}</div>${input('street','Via / Piazza e numero civico',old.street,true)}${input('cap','CAP',old.cap,true)}${input('city','Comune',old.city,true)}${input('province','Provincia',old.province,true)}${input('contactPerson','Referente cantiere',old.contactPerson)}${input('finalCustomer','Committente finale (facoltativo)',old.finalCustomer)}<div class="full"><label>Note</label><textarea name="notes">${esc(old.notes)}</textarea></div><div class="full line"><button class="btn" type="submit" ${!all.length?'disabled':''}>Salva cantiere</button><button class="btn secondary" type="button" id="cancel">Annulla</button></div></form>${!all.length?'<p class="note">Prima crea almeno un cliente nella sezione Clienti.</p>':''}</div>`;setupAddressAutocomplete();$('cancel').onclick=()=>siteId?siteDetail(siteId):initialClientId?clientDetail(initialClientId):show('cantieri');$('entry').onsubmit=e=>{e.preventDefault();let obj=Object.fromEntries(new FormData(e.target));if(!all.some(c=>c.id===obj.clientId))return alert('Seleziona un cliente valido');if(siteId)Object.assign(old,obj);else records.push({id:id(),type:'cantieri',...obj});persist();show('cantieri')}}function siteDetail(siteId){let s=sites().find(r=>r.id===siteId);if(!s)return show('cantieri');$('title').textContent=s.name;$('subtitle').textContent='Scheda progetto / cantiere';let c=clients().find(x=>x.id===s.clientId);$('content').innerHTML=`<div class="actions"><button class="btn secondary" id="back">← Tutti i cantieri</button><button class="btn" id="edit">Modifica cantiere</button></div><div class="panel"><h2>Cliente collegato</h2>${c?`<button class="link" id="openClient">${esc(c.name)}</button><p class="note">${esc(c.kind||'')} · ${esc(c.email||'')}</p>`:'<p class="muted">Questo cantiere proviene dalla versione precedente: seleziona un cliente con “Modifica cantiere”.</p>'}<div class="divider"></div><h2>Ubicazione del cantiere</h2><p>${esc(s.street)}, ${esc(s.cap)} ${esc(s.city)} (${esc(s.province)})</p><p class="note">Committente finale: ${esc(s.finalCustomer||'Non indicato')}<br>Referente: ${esc(s.contactPerson||'Non indicato')}</p><p>${esc(s.notes||'')}</p></div>`;$('back').onclick=()=>show('cantieri');$('edit').onclick=()=>siteForm(siteId);if(c)$('openClient').onclick=()=>clientDetail(c.id)}function listContacts(){let c=records.filter(r=>r.type==='contatti');$('content').innerHTML=`<div class="actions"><button class="btn" id="add">+ Nuovo contatto</button></div><div class="panel"><h2>Contatti</h2><table><thead><tr><th>Nome</th><th>Telefono</th><th>Email</th><th>Comune</th><th>Clienti collegati</th></tr></thead><tbody>${c.map(r=>`<tr><td><button class="link" data-contact="${esc(r.id)}">${esc(r.name)}</button></td><td>${esc(r.phone)}</td><td>${esc(r.email)}</td><td>${esc(r.city)}</td><td>${(r.clientLinks||[]).map(l=>esc(clientName(l.clientId))).join(', ')||'—'}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Nessun contatto</td></tr>'}</tbody></table></div>`;$('add').onclick=()=>contactForm();document.querySelectorAll('[data-contact]').forEach(b=>b.onclick=()=>contactForm(b.dataset.contact))}function contactForm(contactId){let old=records.find(r=>r.id===contactId&&r.type==='contatti')||{};$('title').textContent=contactId?'Modifica contatto':'Nuovo contatto';$('content').innerHTML=`<div class="panel"><form id="entry">${input('name','Nome e cognome',old.name,true)}${input('phone','Telefono',old.phone,true)}${input('email','Email',old.email,true,'type="email"')}${input('city','Comune',old.city,true)}${input('role','Ruolo / Qualifica',old.role)}<div class="full"><label>Clienti collegati e ruolo per cliente</label><div id="clientLinks"></div><button class="btn secondary" type="button" id="addLink">+ Collega cliente</button></div><div class="full line"><button class="btn">Salva contatto</button><button type="button" class="btn secondary" id="cancel">Annulla</button></div></form></div>`;const addLink=(link={})=>{let row=document.createElement('div');row.className='line';row.style.marginBottom='9px';row.innerHTML=`<select class="linked-client" style="flex:2;min-width:160px"><option value="">Seleziona cliente</option>${clients().map(c=>`<option value="${esc(c.id)}" ${link.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select><input class="linked-role" placeholder="Ruolo presso il cliente" value="${esc(link.role||'')}" style="flex:2;min-width:140px"><button class="btn secondary" type="button">Rimuovi</button>`;row.querySelector('button').onclick=()=>row.remove();$('clientLinks').appendChild(row)};(old.clientLinks||[]).forEach(addLink);$('addLink').onclick=()=>addLink();setupAddressAutocomplete();$('cancel').onclick=()=>show('contatti');$('entry').onsubmit=e=>{e.preventDefault();let obj=Object.fromEntries(new FormData(e.target));obj.clientLinks=[...document.querySelectorAll('#clientLinks .line')].map(row=>({clientId:row.querySelector('.linked-client').value,role:row.querySelector('.linked-role').value})).filter(l=>l.clientId);if(contactId)Object.assign(old,obj);else records.push({id:id(),type:'contatti',...obj});persist();show('contatti')}}function csvExport(filename,rows,keys){let csv=[keys.join(';'),...rows.map(r=>keys.map(k=>'"'+String(r[k]??'').replace(/"/g,'""')+'"').join(';'))].join('\r\n');let blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}function exportClients(){csvExport('sma-clienti.csv',clients().map(r=>({...r,status:status(r)})),['name','kind','status','phone','email','street','cap','city','province','vat','taxCode','pec','sdi','notes'])}function exportSites(){csvExport('sma-cantieri.csv',sites().map(r=>({...r,clientName:clientName(r.clientId)})),['name','clientName','street','cap','city','province','contactPerson','finalCustomer','notes'])}
+// SMA CRM 1.2: importazione e comuni italiani
+let comuniCache=null;
+async function loadComuni(){if(comuniCache)return comuniCache;const res=await fetch('https://raw.githubusercontent.com/matteocontrini/comuni-json/master/comuni.json');if(!res.ok)throw Error('Archivio comuni non disponibile');const data=await res.json();comuniCache=data;return data}
+function setupAddressAutocomplete(){const city=$('f_city');if(!city)return;const list=document.createElement('datalist');list.id='sma-comuni';document.body.appendChild(list);city.setAttribute('list','sma-comuni');let all=[];loadComuni().then(data=>{all=data}).catch(()=>{city.title='Ricerca automatica non disponibile: inserire manualmente'});const fill=()=>{const q=city.value.trim().toLowerCase();list.innerHTML='';if(q.length<2)return;all.filter(c=>c.nome.toLowerCase().startsWith(q)).slice(0,30).forEach(c=>{let o=document.createElement('option');o.value=c.nome;list.appendChild(o)});const c=all.find(c=>c.nome.toLowerCase()===q);if(c){const province=$('f_province'),cap=$('f_cap');if(province)province.value=c.sigla||c.provincia?.sigla||'';if(cap){const caps=Array.isArray(c.cap)?c.cap:[c.cap].filter(Boolean);if(caps.length===1)cap.value=caps[0];else if(caps.length>1){cap.placeholder='CAP da selezionare: '+caps.slice(0,4).join(', ');cap.value=''}}}};city.addEventListener('input',fill);city.addEventListener('change',fill)}
+function parseCSV(text){const first=text.split(/\r?\n/)[0]||'';const delim=[';',',','\t'].sort((a,b)=>first.split(b).length-first.split(a).length)[0];let rows=[],row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){let ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(ch===delim&&!quoted){row.push(cell);cell=''}else if((ch==='\r'||ch==='\n')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell);cell='';if(row.some(x=>String(x).trim()))rows.push(row);row=[]}else cell+=ch}row.push(cell);if(row.some(x=>String(x).trim()))rows.push(row);return rows}
+function loadSheetJS(){if(window.XLSX)return Promise.resolve();return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';script.onload=()=>window.XLSX?resolve():reject(Error('Libreria Excel non disponibile'));script.onerror=()=>reject(Error('Libreria Excel non raggiungibile'));document.head.appendChild(script)})}
+function importClients(){ $('title').textContent='Importa clienti';$('subtitle').textContent='Excel / CSV · verifica prima del salvataggio';$('content').innerHTML='<div class="panel"><h2>Importa clienti</h2><p class="note">Seleziona un file CSV, XLSX o XLS. I dati vengono elaborati nel browser.</p><input id="upload" type="file" accept=".csv,.xlsx,.xls"><p id="importMsg" class="note"></p><div id="importWork"></div><button class="btn secondary" id="backImport">← Clienti</button></div>';$('backImport').onclick=()=>show('clienti');$('upload').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{let matrix;if(/\.csv$/i.test(file.name)){matrix=parseCSV((await file.text()).replace(/^\ufeff/,''))}else{await loadSheetJS();const book=XLSX.read(await file.arrayBuffer(),{type:'array'});matrix=XLSX.utils.sheet_to_json(book.Sheets[book.SheetNames[0]],{header:1,raw:false,defval:''})}if(matrix.length<2)throw Error('Nessuna anagrafica trovata');renderImport(matrix)}catch(err){$('importMsg').textContent='Errore: '+err.message}}}
+function renderImport(matrix){const headers=matrix[0].map(x=>String(x).trim());const rows=matrix.slice(1).filter(r=>r.some(v=>String(v).trim()));const fields=[['name','Nome / Ragione sociale'],['kind','Tipologia'],['status','Stato commerciale'],['phone','Telefono'],['email','Email'],['street','Indirizzo'],['cap','CAP'],['city','Comune'],['province','Provincia'],['vat','Partita IVA'],['taxCode','Codice fiscale'],['pec','PEC'],['sdi','SDI']];const aliases={name:['nome','ragione sociale','denominazione','cliente'],kind:['tipo','tipologia','categoria'],status:['stato','stato commerciale'],phone:['telefono','cellulare','tel'],email:['email','e-mail','mail'],street:['indirizzo','via','indirizzo completo'],cap:['cap'],city:['comune','citta','città'],province:['provincia','prov'],vat:['partita iva','piva','p.iva'],taxCode:['codice fiscale','cf'],pec:['pec'],sdi:['sdi']};const norm=x=>String(x??'').toLowerCase().trim().replace(/[^a-z0-9àèéìòù]/g,'');$('importWork').innerHTML='<h2>Associa le colonne</h2><div id="mappings" class="filters" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"></div><div class="line"><label>Stato predefinito <select id="defaultStatus"><option value="potenziale">Potenziale</option><option value="acquisito">Acquisito</option></select></label><label>Tipologia predefinita <select id="defaultKind"><option>Azienda</option><option>Privato</option><option>Professionista</option><option>Condominio</option><option>Impresa edile</option></select></label><label>Duplicati <select id="duplicateMode"><option value="skip">Ignora</option><option value="update">Aggiorna</option></select></label></div><button class="btn" id="previewImport">Controlla righe</button><div id="previewResult"></div>';fields.forEach(([key,label])=>{let div=document.createElement('div');div.innerHTML='<label>'+esc(label)+'</label>';let sel=document.createElement('select');sel.dataset.key=key;sel.add(new Option('Non importare',''));headers.forEach((h,i)=>sel.add(new Option(h||'Colonna '+(i+1),String(i))));const i=headers.findIndex(h=>(aliases[key]||[]).some(a=>norm(a)===norm(h)));sel.value=i<0?'':String(i);div.appendChild(sel);$('mappings').appendChild(div)});const make=()=>rows.map((r,i)=>{let obj={};document.querySelectorAll('#mappings select').forEach(sel=>obj[sel.dataset.key]=sel.value===''?'':String(r[Number(sel.value)]??'').trim());obj.kind=['Azienda','Privato','Professionista','Condominio','Impresa edile'].find(t=>norm(t)===norm(obj.kind))||$('defaultKind').value;obj.status=['acquisito','cliente','attivo'].includes(norm(obj.status))?'acquisito':obj.status? 'potenziale':$('defaultStatus').value;obj.errors=['name','phone','email','street','cap','city','province'].filter(k=>!obj[k]);if(obj.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(obj.email))obj.errors.push('email non valida');obj.row=i+2;return obj});const duplicate=(obj)=>clients().find(c=>(obj.vat&&norm(obj.vat)===norm(c.vat))||(obj.taxCode&&norm(obj.taxCode)===norm(c.taxCode))||(norm(obj.name)===norm(c.name)&&norm(obj.street)===norm(c.street)&&norm(obj.city)===norm(c.city)));$('previewImport').onclick=()=>{const data=make();$('previewResult').innerHTML='<h2>Anteprima ('+data.length+' righe)</h2><div style="max-height:360px;overflow:auto"><table><tr><th>Riga</th><th>Cliente</th><th>Comune</th><th>Esito</th></tr>'+data.slice(0,200).map(r=>'<tr><td>'+r.row+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.city)+'</td><td>'+esc(r.errors.length?'Errore: '+r.errors.join(', '):duplicate(r)?'Duplicato':'Valido')+'</td></tr>').join('')+'</table></div><p class="note">Righe con errori escluse; primi 200 risultati mostrati.</p><button class="btn" id="confirmImport">Conferma importazione</button>';$('confirmImport').onclick=()=>{const input=make(),mode=$('duplicateMode').value;let added=0,updated=0,skipped=0,seen=new Set();const original=JSON.stringify(records);for(const r of input){if(r.errors.length){skipped++;continue}const key=norm(r.vat)||norm(r.taxCode)||norm(r.name)+'|'+norm(r.street)+'|'+norm(r.city);if(seen.has(key)){skipped++;continue}seen.add(key);const old=duplicate(r);const obj={...r};delete obj.errors;delete obj.row;if(old){if(mode==='update'){Object.keys(obj).forEach(k=>{if(obj[k])old[k]=obj[k]});updated++}else skipped++}else{records.push({id:id(),type:'clienti',...obj});added++}}try{persist();alert('Importazione completata: '+added+' nuovi, '+updated+' aggiornati, '+skipped+' ignorati.');show('clienti')}catch(e){records=JSON.parse(original);alert('Impossibile salvare: spazio locale insufficiente')}}}}
 
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SMA CRM 1.1</title>
-<style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202127;background:#f5f5f7}
-*{box-sizing:border-box}
-body{margin:0}
-button,input,select,textarea{font:inherit}
-button{cursor:pointer}
-.app{display:flex;min-height:100vh}
-aside{width:245px;background:#fff;border-right:1px solid #e7e7eb;padding:25px 15px;flex-shrink:0}
-.logo{font-size:25px;font-weight:800;letter-spacing:-1px;margin:0 10px 35px}
-.logo span{color:#d71920}
-nav button{width:100%;display:block;text-align:left;border:0;background:transparent;padding:13px;border-radius:11px;color:#52525b;margin:3px 0}
-nav button.active{background:#fff0f0;color:#c71920;font-weight:700}
-nav button:hover{background:#f3f3f5}
-main{flex:1;min-width:0;padding:35px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:25px}
-h1{font-size:29px;letter-spacing:-1px;margin:0}
-h2{font-size:20px}
-.sub,.muted{color:#777}
-.sub{margin:7px 0}
-.btn{background:#ce1822;color:white;border:0;border-radius:10px;padding:11px 18px;font-weight:600}
-.btn.secondary{background:#ececf0;color:#333}
-.btn.small{padding:7px 10px;font-size:12px}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.card,.panel{background:white;border:1px solid #ececf0;border-radius:18px;padding:22px}
-.card small{color:#777}
-.card strong{display:block;font-size:27px;margin-top:12px}
-.panel{margin-top:20px;overflow-x:auto}
-table{border-collapse:collapse;width:100%;text-align:left}
-th,td{padding:13px;border-bottom:1px solid #eee;font-size:14px}
-th{color:#777;font-weight:600}
-.tag{display:inline-block;padding:5px 9px;border-radius:8px;background:#f1f1f4;font-size:12px}
-.green{background:#e7f7ed;color:#147a3b}
-.blue{background:#e8f1ff;color:#245bb5}
-form{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
-label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
-input,select,textarea{width:100%;border:1px solid #dddde3;border-radius:10px;padding:11px;background:#fff}
-.full{grid-column:1/-1}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
-.note{font-size:13px;color:#777;line-height:1.6}
-.link{border:0;background:none;color:#c71920;font-weight:600;padding:0;text-align:left}
-.toolbar{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:15px}
-details{border-top:1px solid #eee;padding-top:15px}
-summary{cursor:pointer;font-weight:600}
-@media(max-width:950px){.cards{grid-template-columns:repeat(2,1fr)}aside{width:205px}main{padding:20px}}
-@media(max-width:650px){.app{display:block}aside{width:100%;padding:12px}nav{display:flex;overflow-x:auto;gap:5px}nav button{white-space:nowrap;width:auto}.logo{margin:5px 10px 15px}main{padding:15px}.cards{grid-template-columns:1fr 1fr}form{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<div class="app">
-<aside>
-<div class="logo"><span>sma</span>ascensori</div>
-<nav id="menu"></nav>
-</aside>
-<main>
-<div class="top">
-<div><h1 id="title">Dashboard</h1><p class="sub" id="subtitle">Panoramica commerciale</p></div>
-<span class="tag">SMA CRM · Demo 1.1</span>
-</div>
-<div id="content"></div>
-</main>
-</div>
-<script>
-const sections=[
-["dashboard","◫ Dashboard"],
-["clienti","♙ Clienti"],
-["contatti","♧ Contatti"],
-["cantieri","▤ Progetti / Cantieri"],
-["preventivi","▣ Preventivi"],
-["ordini","✓ Conferme ordine"],
-["newsletter","✉ Newsletter"],
-["impostazioni","⚙ Impostazioni"]
-];
-const tipi=["Azienda","Privato","Professionista","Condominio","Impresa edile"];
-let page="dashboard";
-let records=[];
-try{records=JSON.parse(localStorage.getItem("sma_demo_records")||"[]")}catch(e){records=[]}
-if(!Array.isArray(records))records=[];
-let selectedClient=null;
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const uid=()=>typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():"id-"+Date.now()+"-"+Math.random().toString(36).slice(2);
-function save(){localStorage.setItem("sma_demo_records",JSON.stringify(records))}
-function isClient(r){return ["clienti","acquisiti","potenziali"].includes(r.type)}
-function clientStatus(r){return r.status||(r.type==="acquisiti"?"Acquisito":"Potenziale")}
-function clientName(id){return records.find(r=>r.id===id&&isClient(r))?.name||"Cliente non trovato"}
-function menu(){
-document.getElementById("menu").innerHTML=sections.map(([id,name])=>`<button class="${page===id?"active":""}" data-page="${id}">${name}</button>`).join("");
-document.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>show(b.dataset.page));
+
+/* SMA CRM 1.3 - Registro commerciale e indicatori clienti */
+const COMMERCIAL_KEY='sma_demo_commercial_v13';
+let commercial=[];
+try { const loaded=JSON.parse(localStorage.getItem(COMMERCIAL_KEY)||'[]'); commercial=Array.isArray(loaded)?loaded:[]; } catch(e){commercial=[]}
+const euro=v=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(v||0);
+const amount=v=>Number.isFinite(Number(v))?Number(v):0;
+function commercialSave(){localStorage.setItem(COMMERCIAL_KEY,JSON.stringify(commercial))}
+function clientStats(cid){
+  const docs=commercial.filter(d=>d.clientId===cid);
+  const offers=docs.filter(d=>d.type==='offerta');
+  const orders=offers.filter(d=>d.state==='ordine');
+  const open=offers.filter(d=>d.state==='aperta');
+  return {offers:offers.length,offerValue:offers.reduce((a,d)=>a+amount(d.value),0),orders:orders.length,orderValue:orders.reduce((a,d)=>a+amount(d.value),0),openValue:open.reduce((a,d)=>a+amount(d.value),0)};
 }
-function show(id){
-page=id;selectedClient=null;menu();
-document.getElementById("title").textContent=sections.find(s=>s[0]===id)[1].replace(/^[^ ]+ /,"");
-document.getElementById("subtitle").textContent=id==="dashboard"?"Panoramica delle attività commerciali":"Gestione SMA Ascensori";
-if(id==="dashboard")dashboard();
-else if(id==="clienti")clientList();
-else if(id==="cantieri")siteList();
-else if(id==="contatti")contactList();
-else document.getElementById("content").innerHTML='<div class="panel"><h2>Modulo in preparazione</h2><p class="sub">Questa sezione sarà sviluppata nelle prossime versioni.</p></div>';
+function clientTotals(items){return items.reduce((a,c)=>{const s=clientStats(c.id);Object.keys(a).forEach(k=>a[k]+=s[k]);return a},{offers:0,offerValue:0,orders:0,orderValue:0,openValue:0})}
+listClients=function(){
+  $('content').innerHTML=`<div class="actions"><button class="btn" id="add">+ Nuovo cliente</button><button class="btn secondary" id="export">Esporta CSV</button><button class="btn secondary" id="import">Importa Excel / CSV</button><button class="btn secondary" id="commercial">+ Registra offerta</button></div>
+  <div class="cards" id="commercialCards"></div>
+  <div class="panel"><h2>Clienti · Analisi commerciale</h2><div class="filters"><input id="q" placeholder="Cerca cliente, comune, email..."><select id="st"><option value="">Tutti gli stati</option><option value="potenziale">Potenziali</option><option value="acquisito">Acquisiti</option></select><select id="kind"><option value="">Tutte le tipologie</option>${['Azienda','Privato','Professionista','Condominio','Impresa edile'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+  <div class="line"><label>Anno <select id="year"><option value="">Tutti gli anni</option>${Array.from({length:6},(_,i)=>new Date().getFullYear()-i).map(y=>`<option>${y}</option>`).join('')}</select></label><label>Ordina per <select id="sort"><option value="name">Nome cliente</option><option value="offerValue">€ offerte</option><option value="orderValue">€ ordini</option><option value="offers">N. offerte</option><option value="orders">N. ordini</option><option value="openValue">€ aperte</option></select></label></div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Cliente</th><th>Tipologia</th><th>Comune</th><th>Stato</th><th>Cantieri</th><th>N. offerte</th><th>€ offerte</th><th>N. ordini</th><th>€ ordini</th><th>€ aperte</th></tr></thead><tbody id="rows"></tbody></table></div></div>`;
+  $('add').onclick=()=>clientForm();$('export').onclick=exportClients;$('import').onclick=importClients;$('commercial').onclick=()=>commercialForm();
+  ['q','st','kind','year','sort'].forEach(k=>$(k).oninput=render);
+  render();
+  function render(){
+    const q=$('q').value.toLowerCase(),st=$('st').value,kind=$('kind').value,year=$('year').value,sort=$('sort').value;
+    const filtered=clients().filter(r=>(!st||status(r)===st)&&(!kind||r.kind===kind)&&[r.name,r.city,r.email,r.phone,r.vat].join(' ').toLowerCase().includes(q));
+    const statsFor=c=>{
+      const docs=commercial.filter(d=>d.clientId===c.id&&(!year||String(d.date||'').slice(0,4)===year));
+      const offers=docs.filter(d=>d.type==='offerta');
+      return {offers:offers.length,offerValue:offers.reduce((n,d)=>n+amount(d.value),0),orders:offers.filter(d=>d.state==='ordine').length,orderValue:offers.filter(d=>d.state==='ordine').reduce((n,d)=>n+amount(d.value),0),openValue:offers.filter(d=>d.state==='aperta').reduce((n,d)=>n+amount(d.value),0)};
+    };
+    if(sort==='name')filtered.sort((a,b)=>String(a.name).localeCompare(String(b.name),'it'));
+    else filtered.sort((a,b)=>statsFor(b)[sort]-statsFor(a)[sort]);
+    const totals=filtered.reduce((a,c)=>{let s=statsFor(c);Object.keys(a).forEach(k=>a[k]+=s[k]);return a},{offers:0,offerValue:0,orders:0,orderValue:0,openValue:0});
+    $('commercialCards').innerHTML=[['Offerte emesse',totals.offers],['Valore offerte',euro(totals.offerValue)],['Ordini confermati',totals.orders],['Valore ordini',euro(totals.orderValue)]].map(([l,v])=>`<div class="card"><small>${l}</small><strong>${v}</strong></div>`).join('');
+    $('rows').innerHTML=filtered.map(c=>{const s=statsFor(c);return `<tr><td><button class="link" data-client-open="${esc(c.id)}">${esc(c.name)}</button><div class="pill">${esc(c.email)}</div></td><td>${esc(c.kind||'—')}</td><td>${esc(c.city)}</td><td>${status(c)==='acquisito'?'Acquisito':'Potenziale'}</td><td>${sites().filter(x=>x.clientId===c.id).length}</td><td>${s.offers}</td><td>${euro(s.offerValue)}</td><td>${s.orders}</td><td>${euro(s.orderValue)}</td><td>${euro(s.openValue)}</td></tr>`}).join('')||'<tr><td colspan="10" class="empty">Nessun cliente trovato</td></tr>';
+    document.querySelectorAll('[data-client-open]').forEach(b=>b.onclick=()=>clientDetail(b.dataset.clientOpen));
+  }
+};
+const previousClientDetail=clientDetail;
+clientDetail=function(cid){
+  previousClientDetail(cid);
+  const c=clients().find(x=>x.id===cid);if(!c)return;
+  const s=clientStats(cid);
+  const div=document.createElement('div');div.className='panel';
+  div.innerHTML=`<h2>Attività commerciale</h2><div class="cards">${[['N. offerte',s.offers],['€ offerte',euro(s.offerValue)],['N. ordini',s.orders],['€ ordini',euro(s.orderValue)]].map(([l,v])=>`<div class="card"><small>${l}</small><strong>${v}</strong></div>`).join('')}</div><p class="note">Offerte ancora aperte: <strong>${euro(s.openValue)}</strong>. Valori IVA esclusa.</p><button class="btn" id="newOfferClient">+ Nuova offerta</button><div style="overflow-x:auto"><table><thead><tr><th>Numero</th><th>Data</th><th>Tipologia</th><th>Cantiere</th><th>Valore</th><th>Stato</th><th></th></tr></thead><tbody>${commercial.filter(d=>d.clientId===cid).map(d=>`<tr><td>${esc(d.number)}</td><td>${esc(d.date)}</td><td>${esc(d.category)}</td><td>${esc(sites().find(x=>x.id===d.siteId)?.name||'—')}</td><td>${euro(d.value)}</td><td>${d.state==='ordine'?'Ordine':d.state==='aperta'?'Aperta':'Persa'}</td><td><button class="link" data-edit-offer="${esc(d.id)}">Apri</button></td></tr>`).join('')||'<tr><td colspan="7">Nessuna offerta registrata</td></tr>'}</tbody></table></div>`;
+  $('content').appendChild(div);$('newOfferClient').onclick=()=>commercialForm(null,cid);
+  div.querySelectorAll('[data-edit-offer]').forEach(b=>b.onclick=()=>commercialForm(b.dataset.editOffer));
+};
+const previousShow=show;
+show=function(p){if(p==='preventivi'||p==='ordini'){page=p;nav();$('title').textContent=p==='preventivi'?'Preventivi':'Conferme ordine';$('subtitle').textContent='Registro commerciale';return commercialList(p)}return previousShow(p)};
+function commercialList(mode){
+  const docs=commercial.filter(d=>mode==='ordini'?d.state==='ordine':true);
+  $('content').innerHTML=`<div class="actions"><button class="btn" id="newCommercial">+ Registra offerta</button></div><div class="panel"><h2>${mode==='ordini'?'Ordini confermati':'Offerte registrate'}</h2><div style="overflow-x:auto"><table><thead><tr><th>Numero</th><th>Cliente</th><th>Data</th><th>Tipo</th><th>Importo</th><th>Stato</th><th></th></tr></thead><tbody>${docs.map(d=>`<tr><td>${esc(d.number)}</td><td>${esc(clientName(d.clientId))}</td><td>${esc(d.date)}</td><td>${esc(d.category)}</td><td>${euro(d.value)}</td><td>${d.state==='ordine'?'Confermato':d.state==='aperta'?'Aperto':'Perso'}</td><td><button class="link" data-edit-offer="${esc(d.id)}">Apri</button></td></tr>`).join('')||'<tr><td colspan="7">Nessun documento registrato</td></tr>'}</tbody></table></div></div>`;
+  $('newCommercial').onclick=()=>commercialForm();document.querySelectorAll('[data-edit-offer]').forEach(b=>b.onclick=()=>commercialForm(b.dataset.editOffer));
 }
+function commercialForm(docId,initialClient){
+  const old=commercial.find(d=>d.id===docId)||{};
+  $('title').textContent=docId?'Modifica offerta':'Registra offerta';$('subtitle').textContent='Registro commerciale · IVA esclusa';
+  const chosen=old.clientId||initialClient||'';
+  $('content').innerHTML=`<div class="panel"><h2>Dati offerta</h2><form id="offerForm"><div><label>Cliente *</label><select name="clientId" id="offerClient" required><option value="">Seleziona cliente</option>${clients().map(c=>`<option value="${esc(c.id)}" ${chosen===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div><div><label>Cantiere collegato</label><select name="siteId" id="offerSite"></select></div><div><label>Tipo intervento *</label><select name="category">${['NI','MOD','RIP','MAN'].map(v=>`<option ${old.category===v?'selected':''}>${v}</option>`).join('')}</select></div>${input('number','Numero preventivo',old.number,true)}${input('date','Data offerta',old.date||new Date().toISOString().slice(0,10),true,'type="date"')}${input('agent','Commerciale / Agente',old.agent||'')}${input('orderDate','Data conferma ordine',old.orderDate||'',false,'type="date"')}${input('value','Importo € (IVA esclusa)',old.value??'',true,'type="number" min="0" step="0.01"')}<div><label>Stato</label><select name="state"><option value="aperta" ${old.state==='aperta'||!old.state?'selected':''}>Aperta</option><option value="ordine" ${old.state==='ordine'?'selected':''}>Ordine confermato</option><option value="persa" ${old.state==='persa'?'selected':''}>Persa / Annullata</option></select></div><div class="full line"><button class="btn" type="submit">Salva</button><button class="btn secondary" id="cancelOffer" type="button">Annulla</button></div></form><p class="note">Registro iniziale: non genera ancora PDF, numerazioni automatiche né invio email. Una sola riga per offerta, senza duplicare le revisioni.</p></div>`;
+  function updateSites(){const cid=$('offerClient').value;const s=sites().filter(x=>x.clientId===cid);$('offerSite').innerHTML='<option value="">Nessun cantiere</option>'+s.map(x=>`<option value="${esc(x.id)}" ${old.siteId===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}
+  $('offerClient').onchange=updateSites;updateSites();$('cancelOffer').onclick=()=>show('preventivi');
+  $('offerForm').onsubmit=e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));data.value=Number(data.value);if(!Number.isFinite(data.value)||data.value<0)return alert('Importo non valido');if(!clients().some(c=>c.id===data.clientId))return alert('Seleziona un cliente');if(data.siteId&&!sites().some(s=>s.id===data.siteId&&s.clientId===data.clientId))return alert('Il cantiere non appartiene al cliente selezionato');if(commercial.some(d=>d.id!==docId&&d.number.trim().toLowerCase()===data.number.trim().toLowerCase()))return alert('Numero preventivo già presente');const previous=JSON.stringify(commercial);if(docId)Object.assign(old,data);else commercial.push({id:id(),type:'offerta',...data});try{commercialSave();show('preventivi')}catch(err){commercial=JSON.parse(previous);alert('Impossibile salvare il registro commerciale')}};
+}
+
+
+/* Dashboard direzionale 1.4 - dati locali reali, nessun valore inventato */
+const dashCSS=document.createElement('style');dashCSS.textContent=`
+.dash-filters{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:12px}.dash-filters label{font-size:12px;color:#71717a}.dash-filters input,.dash-filters select{margin-top:5px}.dash-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.dash-kpis .card strong{font-size:25px}.dash-two{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}.dash-bars{display:flex;align-items:end;gap:8px;height:185px;padding:10px 0 24px;border-bottom:1px solid #e9e9ee}.dash-month{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;min-width:0;position:relative}.dash-pair{display:flex;gap:3px;align-items:end;width:100%;justify-content:center;height:100%}.dash-bar{width:34%;min-height:0;border-radius:5px 5px 0 0;background:#d01d28}.dash-bar.order{background:#24252d}.dash-month small{position:absolute;bottom:-21px;font-size:10px;color:#777}.dash-legend{font-size:12px;color:#777;display:flex;gap:18px;flex-wrap:wrap}.dash-dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;background:#d01d28}.dash-dot.order{background:#24252d}.dash-alert{padding:10px 12px;background:#fff8ed;border-radius:10px;color:#795016;font-size:13px}.dash-scroll{overflow-x:auto}@media(max-width:1050px){.dash-filters{grid-template-columns:repeat(2,1fr)}.dash-two{grid-template-columns:1fr}}@media(max-width:700px){.dash-kpis{grid-template-columns:repeat(2,1fr)}.dash-filters{grid-template-columns:1fr 1fr}}`;
+document.head.appendChild(dashCSS);
 function dashboard(){
-const clients=records.filter(isClient),sites=records.filter(r=>r.type==="cantieri");
-let acquired=clients.filter(r=>clientStatus(r)==="Acquisito").length;
-let prospects=clients.length-acquired;
-document.getElementById("content").innerHTML=`
-<div class="cards">
-${[["Clienti acquisiti",acquired],["Clienti potenziali",prospects],["Contatti",records.filter(r=>r.type==="contatti").length],["Cantieri",sites.length]].map(x=>`<div class="card"><small>${x[0]}</small><strong>${x[1]}</strong></div>`).join("")}
-</div>
-<div class="panel"><h2>Riepilogo commerciale</h2>
-<table><thead><tr><th>Tipologia</th><th>Offerte</th><th>Ordini</th><th>Valore offerte</th></tr></thead>
-<tbody>${["NI · Nuovi impianti","MOD · Ammodernamenti","RIP · Riparazioni","MAN · Manutenzioni"].map(x=>`<tr><td>${x}</td><td>0</td><td>0</td><td>€ 0,00</td></tr>`).join("")}</tbody></table>
-<p class="note">Il modulo preventivi sarà collegato nelle versioni successive.</p></div>`;
+ const today=new Date(),year=today.getFullYear();
+ $('subtitle').textContent='Andamento offerte, ordini e rete commerciale · dati effettivi';
+ $('content').innerHTML=`<div class="panel" style="margin-top:0"><div class="dash-filters">
+ <div><label>Periodo<select id="dPeriod"><option value="year">Anno corrente</option><option value="quarter">Trimestre corrente</option><option value="month">Mese corrente</option><option value="custom">Personalizzato</option><option value="all">Tutto lo storico</option></select></label></div>
+ <div><label>Commerciale<select id="dAgent"><option value="">Tutti gli agenti</option></select></label></div>
+ <div><label>Tipologia<select id="dType"><option value="">Tutte</option>${['NI','MOD','RIP','MAN'].map(x=>`<option>${x}</option>`).join('')}</select></label></div>
+ <div><label>Provincia<select id="dProvince"><option value="">Tutte le province</option></select></label></div>
+ <div id="dCustom" style="display:none;grid-column:1/-1"><div class="line"><label>Dal <input id="dFrom" type="date" value="${year}-01-01"></label><label>Al <input id="dTo" type="date" value="${today.toISOString().slice(0,10)}"></label></div></div>
+ </div></div><div class="dash-kpis" id="dKpis" style="margin-top:16px"></div>
+ <div class="dash-two"><div class="panel"><h2>Andamento mensile</h2><div class="dash-legend"><span><i class="dash-dot"></i>Offerte</span><span><i class="dash-dot order"></i>Ordini</span></div><div id="dChart"></div></div>
+ <div class="panel"><h2>Pipeline commerciale</h2><div id="dPipeline"></div></div></div>
+ <div class="panel"><h2>Rendimento per commerciale</h2><div class="dash-scroll"><table><thead><tr><th>Agente</th><th>N. offerte</th><th>€ offerte</th><th>N. ordini</th><th>€ ordini</th><th>Conversione</th></tr></thead><tbody id="dAgents"></tbody></table></div></div>
+ <div class="panel"><h2>Analisi per intervento</h2><div class="dash-scroll"><table><thead><tr><th>Categoria</th><th>Offerte</th><th>€ offerte</th><th>Ordini</th><th>€ ordini</th><th>€ aperte</th></tr></thead><tbody id="dCategories"></tbody></table></div></div>
+ <div class="panel"><h2>Offerte da seguire</h2><div class="dash-scroll"><table><thead><tr><th>Numero</th><th>Cliente</th><th>Agente</th><th>Data</th><th>Importo</th><th>Giorni trascorsi</th></tr></thead><tbody id="dFollow"></tbody></table></div></div>
+ <div class="panel"><h2>Anagrafiche</h2><div class="cards" id="dRegistry"></div><p class="note">Dati conservati nel browser. Non usare informazioni reali in questa demo pubblica. I margini e gli obiettivi commerciali richiederanno un listino e permessi dedicati.</p></div>`;
+ const agents=[...new Set(commercial.map(d=>(d.agent||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'it'));
+ agents.forEach(a=>$('dAgent').add(new Option(a,a)));
+ const provinces=[...new Set(clients().map(c=>(c.province||'').trim().toUpperCase()).filter(Boolean))].sort();
+ provinces.forEach(p=>$('dProvince').add(new Option(p,p)));
+ ['dPeriod','dAgent','dType','dProvince','dFrom','dTo'].forEach(k=>$(k).addEventListener('change',renderDash));renderDash();
+ function renderDash(){
+  const period=$('dPeriod').value,agent=$('dAgent').value,type=$('dType').value,province=$('dProvince').value;
+  $('dCustom').style.display=period==='custom'?'block':'none';
+  const from=period==='year'?`${year}-01-01`:period==='month'?`${year}-${String(today.getMonth()+1).padStart(2,'0')}-01`:period==='quarter'?`${year}-${String(Math.floor(today.getMonth()/3)*3+1).padStart(2,'0')}-01`:period==='custom'?$('dFrom').value:'';
+  const to=period==='custom'?$('dTo').value:period==='all'?'':today.toISOString().slice(0,10);
+  const matched=commercial.filter(d=>{
+   const c=clients().find(c=>c.id===d.clientId),p=(c?.province||'').trim().toUpperCase();
+   return (!agent||(d.agent||'').trim()===agent)&&(!type||d.category===type)&&(!province||p===province);
+  });
+  // Offerte contate per data di emissione; ordini per data di conferma, se indicata.
+  const inRange=date=>(!from||date>=from)&&(!to||date<=to);
+  const offers=matched.filter(d=>inRange(d.date||''));
+  const orders=matched.filter(d=>d.state==='ordine'&&inRange(d.orderDate||d.date||''));
+  const open=offers.filter(d=>d.state==='aperta');
+  const sum=arr=>arr.reduce((s,d)=>s+Number(d.value||0),0);
+  const conversion=offers.length?`${(orders.length/offers.length*100).toFixed(1).replace('.',',')}%`:'—';
+  const stats=[['Valore offerte',euro(sum(offers))],['Valore ordini',euro(sum(orders))],['Offerte emesse',offers.length],['Ordini confermati',orders.length],['Offerte aperte',euro(sum(open))],['Conversione*',conversion],['Valore medio ordine',orders.length?euro(sum(orders)/orders.length):'—'],['Offerte aperte (n.)',open.length],['Clienti acquisiti',clients().filter(c=>status(c)==='acquisito').length]];
+  $('dKpis').innerHTML=stats.map(([l,v])=>`<div class="card"><small>${l}</small><strong>${v}</strong></div>`).join('');
+  const months=Array.from({length:12},(_,i)=>({m:i,offer:sum(offers.filter(d=>new Date((d.date||'')+'T12:00:00').getMonth()===i)),order:sum(orders.filter(d=>new Date((d.orderDate||d.date||'')+'T12:00:00').getMonth()===i))}));
+  const max=Math.max(1,...months.flatMap(m=>[m.offer,m.order]));
+  $('dChart').innerHTML=`<div class="dash-bars">${months.map(m=>`<div class="dash-month"><div class="dash-pair"><div class="dash-bar" title="Offerte: ${euro(m.offer)}" style="height:${m.offer/max*100}%"></div><div class="dash-bar order" title="Ordini: ${euro(m.order)}" style="height:${m.order/max*100}%"></div></div><small>${['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][m.m]}</small></div>`).join('')}</div><p class="note">Grafico per mese dell'anno. Il periodo selezionato determina i documenti inclusi.</p>`;
+  $('dPipeline').innerHTML=`<div class="cards" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><p class="muted">Aperte</p><strong>${open.length}</strong></div><div><p class="muted">Valore aperto</p><strong>${euro(sum(open))}</strong></div><div><p class="muted">Senza esito da 30+ giorni</p><strong>${open.filter(d=>(today-new Date((d.date||'')+'T12:00:00'))/86400000>=30).length}</strong></div><div><p class="muted">Offerte perse</p><strong>${offers.filter(d=>d.state==='persa').length}</strong></div></div><p class="dash-alert">* Conversione indicativa sul periodo: gli ordini confermati possono riferirsi a offerte emesse in periodi precedenti.</p>`;
+  const group=(values,field)=>[...new Set(values.map(d=>field(d)))].sort().map(name=>({name,off:offers.filter(d=>field(d)===name),ord:orders.filter(d=>field(d)===name)}));
+  const rows=(groups,cat=false)=>groups.map(g=>{const n=g.off.length,k=g.ord.length;return `<tr><td>${esc(g.name)}</td><td>${n}</td><td>${euro(sum(g.off))}</td><td>${k}</td><td>${euro(sum(g.ord))}</td><td>${cat?euro(sum(g.off.filter(d=>d.state==='aperta'))):(n?(k/n*100).toFixed(1).replace('.',',')+'%':'—')}</td></tr>`}).join('');
+  $('dAgents').innerHTML=rows(group(matched,d=>(d.agent||'').trim()||'Non assegnato'))||'<tr><td colspan="6">Nessun dato</td></tr>';
+  $('dCategories').innerHTML=rows(['NI','MOD','RIP','MAN'].map(name=>({name,off:offers.filter(d=>d.category===name),ord:orders.filter(d=>d.category===name)})),true);
+  $('dFollow').innerHTML=open.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).slice(0,15).map(d=>`<tr><td>${esc(d.number)}</td><td>${esc(clientName(d.clientId))}</td><td>${esc(d.agent||'—')}</td><td>${esc(d.date)}</td><td>${euro(d.value)}</td><td>${Math.max(0,Math.floor((today-new Date((d.date||'')+'T12:00:00'))/86400000))}</td></tr>`).join('')||'<tr><td colspan="6">Nessuna offerta aperta</td></tr>';
+  $('dRegistry').innerHTML=[['Clienti potenziali',clients().filter(c=>status(c)==='potenziale').length],['Contatti',records.filter(r=>r.type==='contatti').length],['Cantieri',sites().length],['Clienti totali',clients().length]].map(([l,n])=>`<div class="card"><small>${l}</small><strong>${n}</strong></div>`).join('');
+ }
 }
-function clientList(){
-document.getElementById("content").innerHTML=`
-<div class="actions"><button class="btn" id="add">+ Nuovo cliente</button><button class="btn secondary" id="export">Esporta CSV</button></div>
-<div class="panel"><div class="toolbar">
-<input id="search" placeholder="Cerca nome, comune, email...">
-<select id="status"><option value="">Tutti gli stati</option><option>Potenziale</option><option>Acquisito</option></select>
-<select id="kind"><option value="">Tutte le tipologie</option>${tipi.map(t=>`<option>${t}</option>`).join("")}</select>
-</div><table><thead><tr><th>Cliente</th><th>Tipologia</th><th>Comune</th><th>Stato</th><th>Cantieri</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>`;
-document.getElementById("add").onclick=()=>clientForm();
-document.getElementById("export").onclick=()=>exportCSV(records.filter(isClient),"sma-clienti.csv");
-["search","status","kind"].forEach(id=>document.getElementById(id).oninput=render);
-render();
-function render(){
-let q=document.getElementById("search").value.toLowerCase(),st=document.getElementById("status").value,k=document.getElementById("kind").value;
-let data=records.filter(isClient).filter(r=>(!st||clientStatus(r)===st)&&(!k||(r.kind||"Azienda")===k)&&[r.name,r.city,r.email,r.phone].join(" ").toLowerCase().includes(q));
-document.getElementById("rows").innerHTML=data.map(r=>`<tr>
-<td><button class="link" data-view="${esc(r.id)}">${esc(r.name)}</button></td>
-<td>${esc(r.kind||"Azienda")}</td><td>${esc(r.city)}</td>
-<td><span class="tag ${clientStatus(r)==="Acquisito"?"green":"blue"}">${esc(clientStatus(r))}</span></td>
-<td>${records.filter(s=>s.type==="cantieri"&&s.clientId===r.id).length}</td>
-<td><button class="btn secondary small" data-edit="${esc(r.id)}">Modifica</button></td></tr>`).join("")||'<tr><td colspan="6">Nessun cliente trovato</td></tr>';
-document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>clientDetail(b.dataset.view));
-document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>clientForm(b.dataset.edit));
-}
-}
-function clientDetail(id){
-let r=records.find(x=>x.id===id&&isClient(x));if(!r)return show("clienti");
-let sites=records.filter(s=>s.type==="cantieri"&&s.clientId===id);
-document.getElementById("content").innerHTML=`
-<div class="actions"><button class="btn secondary" id="back">← Clienti</button><button class="btn" id="edit">Modifica cliente</button><button class="btn secondary" id="newsite">+ Nuovo cantiere</button></div>
-<div class="panel"><h2>${esc(r.name)}</h2>
-<p><span class="tag">${esc(r.kind||"Azienda")}</span> <span class="tag ${clientStatus(r)==="Acquisito"?"green":"blue"}">${esc(clientStatus(r))}</span></p>
-<p>${esc(r.street)} ${esc(r.cap)} ${esc(r.city)} ${esc(r.province)}</p>
-<p>Telefono: ${esc(r.phone)} · Email: ${esc(r.email)}</p>
-${r.vat?`<p>Partita IVA: ${esc(r.vat)}</p>`:""}
-${r.tax?`<p>Codice fiscale: ${esc(r.tax)}</p>`:""}
-</div>
-<div class="panel"><h2>Cantieri collegati (${sites.length})</h2>
-<table><thead><tr><th>Riferimento</th><th>Comune</th><th>Indirizzo</th></tr></thead>
-<tbody>${sites.map(s=>`<tr><td><button class="link" data-site="${esc(s.id)}">${esc(s.name)}</button></td><td>${esc(s.city)}</td><td>${esc(s.street)}</td></tr>`).join("")||'<tr><td colspan="3">Nessun cantiere collegato</td></tr>'}</tbody></table></div>`;
-document.getElementById("back").onclick=()=>show("clienti");
-document.getElementById("edit").onclick=()=>clientForm(id);
-document.getElementById("newsite").onclick=()=>siteForm(null,id);
-document.querySelectorAll("[data-site]").forEach(b=>b.onclick=()=>siteDetail(b.dataset.site));
-}
-function clientForm(id){
-let old=records.find(r=>r.id===id&&isClient(r))||{};
-document.getElementById("content").innerHTML=`
-<div class="panel"><h2>${id?"Modifica":"Nuova"} anagrafica cliente</h2>
-<form id="entry">
-<div><label>Tipologia soggetto *</label><select name="kind" id="kind">${tipi.map(t=>`<option ${old.kind===t?"selected":""}>${t}</option>`).join("")}</select></div>
-<div><label>Stato commerciale *</label><select name="status"><option ${clientStatus(old)==="Potenziale"?"selected":""}>Potenziale</option><option ${clientStatus(old)==="Acquisito"?"selected":""}>Acquisito</option></select></div>
-${field("name","Ragione sociale / Nome *",old,true)}
-${field("phone","Telefono *",old,true)}
-${field("email","Email *",old,true,"email")}
-${field("street","Via / Piazza e numero civico *",old,true)}
-${field("cap","CAP *",old,true)}
-${field("city","Comune *",old,true)}
-${field("province","Provincia *",old,true)}
-<div class="full"><details><summary>Dati aggiuntivi</summary>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:15px">
-${field("vat","Partita IVA",old)}${field("tax","Codice fiscale",old)}
-${field("pec","PEC",old)}${field("sdi","Codice SDI",old)}
-${field("role","Qualifica / Albo",old)}${field("notes","Note",old)}
-</div></details></div>
-<div class="full"><button class="btn" type="submit">Salva cliente</button> <button type="button" class="btn secondary" id="back">Annulla</button></div>
-</form></div>`;
-document.getElementById("back").onclick=()=>id?clientDetail(id):show("clienti");
-document.getElementById("entry").onsubmit=e=>{
-e.preventDefault();let data=Object.fromEntries(new FormData(e.target));
-if(id)Object.assign(old,data,{type:"clienti"});
-else{let r={id:uid(),type:"clienti",...data};records.push(r);id=r.id}
-save();clientDetail(id);
-};
-}
-function field(key,label,old,required=false,inputType="text"){
-return `<div><label>${label}</label><input name="${key}" type="${inputType}" value="${esc(old[key]||"")}" ${required?"required":""}></div>`;
-}
-function siteList(){
-let sites=records.filter(r=>r.type==="cantieri");
-document.getElementById("content").innerHTML=`
-<div class="actions"><button class="btn" id="add">+ Nuovo cantiere</button><button class="btn secondary" id="export">Esporta CSV</button></div>
-<div class="panel"><input id="search" placeholder="Cerca cantiere, cliente o comune...">
-<table><thead><tr><th>Cantiere</th><th>Cliente collegato</th><th>Comune</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>`;
-document.getElementById("add").onclick=()=>siteForm();
-document.getElementById("export").onclick=()=>exportCSV(sites,"sma-cantieri.csv");
-document.getElementById("search").oninput=render;
-render();
-function render(){
-let q=document.getElementById("search").value.toLowerCase();
-document.getElementById("rows").innerHTML=sites.filter(r=>[r.name,r.city,clientName(r.clientId)].join(" ").toLowerCase().includes(q)).map(r=>`
-<tr><td><button class="link" data-site="${esc(r.id)}">${esc(r.name)}</button></td>
-<td>${r.clientId?`<button class="link" data-client="${esc(r.clientId)}">${esc(clientName(r.clientId))}</button>`:'<span class="muted">Da collegare</span>'}</td>
-<td>${esc(r.city)}</td><td><button class="btn secondary small" data-edit="${esc(r.id)}">Modifica</button></td></tr>`).join("")||'<tr><td colspan="4">Nessun cantiere trovato</td></tr>';
-document.querySelectorAll("[data-site]").forEach(b=>b.onclick=()=>siteDetail(b.dataset.site));
-document.querySelectorAll("[data-client]").forEach(b=>b.onclick=()=>clientDetail(b.dataset.client));
-document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>siteForm(b.dataset.edit));
-}
-}
-function siteDetail(id){
-let r=records.find(x=>x.id===id&&x.type==="cantieri");if(!r)return show("cantieri");
-document.getElementById("content").innerHTML=`
-<div class="actions"><button class="btn secondary" id="back">← Cantieri</button><button class="btn" id="edit">Modifica cantiere</button></div>
-<div class="panel"><h2>${esc(r.name)}</h2>
-<p>${esc(r.street)} · ${esc(r.cap)} ${esc(r.city)} (${esc(r.province)})</p>
-<p><strong>Cliente collegato:</strong> ${r.clientId?`<button class="link" id="client">${esc(clientName(r.clientId))}</button>`:'<span class="muted">Non ancora collegato</span>'}</p>
-${r.finalClient?`<p>Committente finale: ${esc(r.finalClient)}</p>`:""}
-<p class="note">${esc(r.notes)}</p></div>`;
-document.getElementById("back").onclick=()=>show("cantieri");
-document.getElementById("edit").onclick=()=>siteForm(id);
-if(r.clientId&&document.getElementById("client"))document.getElementById("client").onclick=()=>clientDetail(r.clientId);
-}
-function siteForm(id,defaultClient){
-let old=records.find(r=>r.id===id&&r.type==="cantieri")||{};
-let clients=records.filter(isClient);
-document.getElementById("content").innerHTML=`
-<div class="panel"><h2>${id?"Modifica":"Nuovo"} cantiere</h2>
-${!clients.length?'<p class="note">Per creare un cantiere occorre prima registrare un cliente.</p>':""}
-<form id="entry">
-<div class="full"><label>Cliente collegato *</label>
-<select name="clientId" required><option value="">Seleziona cliente...</option>
-${clients.map(c=>`<option value="${esc(c.id)}" ${(old.clientId||defaultClient)===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
-${field("name","Riferimento cantiere *",old,true)}
-${field("street","Indirizzo e numero civico *",old,true)}
-${field("cap","CAP *",old,true)}
-${field("city","Comune *",old,true)}
-${field("province","Provincia *",old,true)}
-${field("finalClient","Committente finale (facoltativo)",old)}
-${field("notes","Note",old)}
-<div class="full"><button class="btn" type="submit" ${!clients.length?"disabled":""}>Salva cantiere</button>
-<button class="btn secondary" type="button" id="back">Annulla</button></div>
-</form></div>`;
-document.getElementById("back").onclick=()=>id?siteDetail(id):show("cantieri");
-document.getElementById("entry").onsubmit=e=>{
-e.preventDefault();let data=Object.fromEntries(new FormData(e.target));
-if(!records.some(r=>isClient(r)&&r.id===data.clientId)){alert("Seleziona un cliente valido");return}
-if(id)Object.assign(old,data);
-else{id=uid();records.push({id,type:"cantieri",...data})}
-save();siteDetail(id);
-};
-}
-function contactList(){
-let rows=records.filter(r=>r.type==="contatti");
-document.getElementById("content").innerHTML=`
-<div class="actions"><button class="btn" id="add">+ Nuovo contatto</button><button class="btn secondary" id="export">Esporta CSV</button></div>
-<div class="panel"><table><thead><tr><th>Nome</th><th>Comune</th><th>Email</th><th>Telefono</th><th></th></tr></thead>
-<tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.city)}</td><td>${esc(r.email)}</td><td>${esc(r.phone)}</td>
-<td><button class="btn secondary small" data-edit="${esc(r.id)}">Modifica</button></td></tr>`).join("")||'<tr><td colspan="5">Nessun contatto presente</td></tr>'}</tbody></table></div>`;
-document.getElementById("add").onclick=()=>contactForm();
-document.getElementById("export").onclick=()=>exportCSV(rows,"sma-contatti.csv");
-document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>contactForm(b.dataset.edit));
-}
-function contactForm(id){
-let old=records.find(r=>r.id===id&&r.type==="contatti")||{};
-document.getElementById("content").innerHTML=`<div class="panel"><h2>${id?"Modifica":"Nuovo"} contatto</h2>
-<form id="entry">${field("name","Nome e cognome *",old,true)}${field("phone","Telefono *",old,true)}
-${field("email","Email *",old,true,"email")}${field("city","Comune *",old,true)}
-${field("role","Ruolo",old)}${field("notes","Note",old)}
-<div class="full"><button class="btn" type="submit">Salva</button> <button class="btn secondary" type="button" id="back">Annulla</button></div></form></div>`;
-document.getElementById("back").onclick=()=>show("contatti");
-document.getElementById("entry").onsubmit=e=>{
-e.preventDefault();let data=Object.fromEntries(new FormData(e.target));
-if(id)Object.assign(old,data);
-else records.push({id:uid(),type:"contatti",...data});
-save();show("contatti");
-};
-}
-function exportCSV(data,filename){
-let keys=["name","kind","status","clientId","phone","email","street","cap","city","province","vat","tax","notes"];
-let csv=[keys.join(";"),...data.map(r=>keys.map(k=>'"'+String(r[k]||"").replace(/"/g,'""')+'"').join(";"))].join("\r\n");
-let blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
-let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
-show("dashboard");
-</script>
-</body>
-</html>
+
+show('dashboard');
+</script></body></html>
