@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SMA CRM</title>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202127;background:#f5f5f7}
+*{box-sizing:border-box}
+body{margin:0}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{display:flex;min-height:100vh}
+aside{width:245px;background:#fff;border-right:1px solid #e7e7eb;padding:25px 15px;flex-shrink:0}
+.logo{font-size:25px;font-weight:800;letter-spacing:-1px;margin:0 10px 35px}
+.logo span{color:#d71920}
+nav button{width:100%;display:flex;align-items:center;text-align:left;border:0;background:transparent;padding:13px;border-radius:11px;color:#52525b;margin:3px 0}
+nav button.active{background:#fff0f0;color:#c71920;font-weight:700}
+nav button:hover{background:#f3f3f5}
+main{flex:1;min-width:0;padding:35px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:25px}
+h1{font-size:29px;letter-spacing:-1px;margin:0}
+.sub{color:#888;margin:7px 0}
+.btn{background:#ce1822;color:white;border:0;border-radius:10px;padding:11px 18px;font-weight:600}
+.btn.secondary{background:#ececf0;color:#333}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.card,.panel{background:white;border:1px solid #ececf0;border-radius:18px;padding:22px}
+.card small{color:#777}
+.card strong{display:block;font-size:27px;margin-top:12px}
+.panel{margin-top:20px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;text-align:left}
+th,td{padding:14px;border-bottom:1px solid #eee;font-size:14px}
+th{color:#777;font-weight:600}
+.tag{display:inline-block;padding:5px 9px;border-radius:8px;background:#f1f1f4;font-size:12px}
+.green{background:#e7f7ed;color:#147a3b}
+.blue{background:#e8f1ff;color:#245bb5}
+form{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+input,select,textarea{width:100%;border:1px solid #dddde3;border-radius:10px;padding:11px;background:#fff}
+.full{grid-column:1/-1}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
+.hidden{display:none}
+.note{font-size:13px;color:#777;line-height:1.6}
+@media(max-width:950px){.cards{grid-template-columns:repeat(2,1fr)}aside{width:205px}main{padding:20px}}
+@media(max-width:650px){.app{display:block}aside{width:100%;padding:12px}nav{display:flex;overflow-x:auto;gap:5px}nav button{white-space:nowrap;width:auto}.logo{margin:5px 10px 15px}main{padding:15px}.cards{grid-template-columns:1fr 1fr}form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+<div class="logo"><span>sma</span>ascensori</div>
+<nav id="menu"></nav>
+</aside>
+<main>
+<div class="top">
+<div><h1 id="title">Dashboard</h1><p class="sub" id="subtitle">Panoramica commerciale</p></div>
+<span class="tag">SMA CRM · Demo 1.0</span>
+</div>
+<div id="content"></div>
+</main>
+</div>
+<script>
+const sections=[
+["dashboard","◫ Dashboard"],
+["acquisiti","✓ Clienti acquisiti"],
+["potenziali","◎ Clienti potenziali"],
+["contatti","♙ Contatti"],
+["cantieri","▤ Progetti / Cantieri"],
+["preventivi","▣ Preventivi"],
+["ordini","✓ Conferme ordine"],
+["newsletter","✉ Newsletter"],
+["impostazioni","⚙ Impostazioni"]
+];
+let page="dashboard";
+let records=JSON.parse(localStorage.getItem("sma_demo_records")||"[]");
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function save(){localStorage.setItem("sma_demo_records",JSON.stringify(records))}
+function menu(){
+document.getElementById("menu").innerHTML=sections.map(([id,name])=>`<button class="${page===id?'active':''}" data-page="${id}">${name}</button>`).join("");
+document.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>show(b.dataset.page));
+}
+function show(id){
+page=id;menu();
+document.getElementById("title").textContent=sections.find(s=>s[0]===id)[1].replace(/^[^ ]+ /,"");
+document.getElementById("subtitle").textContent=id==="dashboard"?"Panoramica delle attività commerciali":"Gestione SMA Ascensori";
+if(id==="dashboard")dashboard();
+else if(["acquisiti","potenziali","contatti","cantieri"].includes(id))listing(id);
+else document.getElementById("content").innerHTML=`<div class="panel"><h2>Modulo in preparazione</h2><p class="sub">Questa sezione sarà sviluppata nelle prossime versioni.</p></div>`;
+}
+function dashboard(){
+let a=records.filter(x=>x.type==="acquisiti").length;
+let p=records.filter(x=>x.type==="potenziali").length;
+let c=records.filter(x=>x.type==="contatti").length;
+let s=records.filter(x=>x.type==="cantieri").length;
+document.getElementById("content").innerHTML=`
+<div class="cards">
+${[["Clienti acquisiti",a],["Clienti potenziali",p],["Contatti",c],["Cantieri",s]].map(x=>`<div class="card"><small>${x[0]}</small><strong>${x[1]}</strong></div>`).join("")}
+</div>
+<div class="panel"><h2>Riepilogo commerciale</h2>
+<table><thead><tr><th>Tipologia</th><th>Offerte</th><th>Ordini</th><th>Valore offerte</th></tr></thead>
+<tbody>${["NI · Nuovi impianti","MOD · Ammodernamenti","RIP · Riparazioni","MAN · Manutenzioni"].map(x=>`<tr><td>${x}</td><td>0</td><td>0</td><td>€ 0,00</td></tr>`).join("")}</tbody></table>
+<p class="note">I valori saranno aggiornati automaticamente quando svilupperemo il modulo preventivi.</p></div>`;
+}
+function listing(type){
+let rows=records.filter(r=>r.type===type);
+document.getElementById("content").innerHTML=`
+<div class="actions"><button class="btn" id="add">+ Nuova anagrafica</button>
+<button class="btn secondary" id="export">Esporta CSV</button></div>
+<div class="panel"><input id="search" placeholder="Cerca per nome, email, comune...">
+<table><thead><tr><th>Nome / Riferimento</th><th>Comune</th><th>Email</th><th>Telefono</th><th></th></tr></thead>
+<tbody id="rows"></tbody></table></div>`;
+document.getElementById("add").onclick=()=>form(type);
+document.getElementById("export").onclick=()=>exportCSV(type);
+document.getElementById("search").oninput=renderRows;
+renderRows();
+function renderRows(){
+let q=document.getElementById("search").value.toLowerCase();
+document.getElementById("rows").innerHTML=rows.filter(r=>Object.values(r).join(" ").toLowerCase().includes(q)).map(r=>`
+<tr><td><strong>${esc(r.name)}</strong></td><td>${esc(r.city)}</td><td>${esc(r.email)}</td><td>${esc(r.phone)}</td>
+<td><button class="btn secondary" data-edit="${r.id}">Modifica</button></td></tr>`).join("")||'<tr><td colspan="5">Nessun elemento presente</td></tr>';
+document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>form(type,b.dataset.edit));
+}
+}
+function form(type,id){
+let old=records.find(r=>r.id===id)||{};
+let contact=type==="contatti",site=type==="cantieri";
+let fields=[
+["name",site?"Riferimento progetto / cantiere":contact?"Nome e cognome":"Ragione sociale / Nome",true],
+["phone","Telefono",!site],
+["email","Email",!site],
+["street","Via / Piazza e numero civico",!contact],
+["cap","CAP",!contact],
+["city","Comune",true],
+["province","Provincia",!contact],
+["notes","Note",false]
+];
+document.getElementById("content").innerHTML=`<div class="panel"><h2>${id?"Modifica":"Nuova"} anagrafica</h2>
+<form id="entry">${fields.map(([key,label,req])=>`<div class="${key==="notes"?"full":""}"><label>${label}${req?" *":""}</label><input name="${key}" value="${esc(old[key]||"")}" ${req?"required":""} ${key==="email"?'type="email"':""}></div>`).join("")}
+<div class="full"><button class="btn" type="submit">Salva</button> <button type="button" class="btn secondary" id="back">Annulla</button></div></form>
+<p class="note">* Campi obbligatori. Il completamento automatico del comune e l'importazione Excel saranno collegati nella versione successiva.</p></div>`;
+document.getElementById("back").onclick=()=>show(type);
+document.getElementById("entry").onsubmit=e=>{
+e.preventDefault();
+let data=Object.fromEntries(new FormData(e.target));
+if(id)Object.assign(old,data);
+else records.push({id:crypto.randomUUID(),type,...data});
+save();show(type);
+};
+}
+function exportCSV(type){
+let rows=records.filter(r=>r.type===type);
+let keys=["name","phone","email","street","cap","city","province","notes"];
+let csv=[keys.join(";"),...rows.map(r=>keys.map(k=>'"'+String(r[k]||"").replace(/"/g,'""')+'"').join(";"))].join("\r\n");
+let blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="sma-"+type+".csv";a.click();URL.revokeObjectURL(a.href);
+}
+show("dashboard");
+</script>
+</body>
+</html>
